@@ -16,6 +16,8 @@ from agents import build_all_agents
 from tasks import build_all_tasks
 from tools import extract_resume_text
 from config import settings
+from database.db import init_db
+from database.crud import save_resume, save_report
 
 # Cap how much raw resume text gets injected into the first task's prompt.
 # Very long resumes (multi-page, dense) can otherwise push a single request
@@ -24,15 +26,18 @@ from config import settings
 MAX_RESUME_PREVIEW_CHARS = 6000
 
 
-def run_career_crew(resume_pdf_path: str) -> str:
+def run_career_crew(resume_pdf_path: str, original_filename: str = None) -> dict:
     """
-    Execute the full career-analysis pipeline for one resume.
+    Execute the full career-analysis pipeline for one resume, and persist
+    both the resume and the generated report to the database.
 
     Args:
         resume_pdf_path: Absolute path to the uploaded resume PDF.
+        original_filename: The user's original filename, for display in the
+            History page. Falls back to the path's basename if not given.
 
     Returns:
-        The full Markdown text of the generated career report.
+        A dict: {"report_markdown": str, "resume_id": int, "report_id": int}
 
     Raises:
         FileNotFoundError, ValueError: propagated from PDF extraction if the
@@ -40,13 +45,18 @@ def run_career_crew(resume_pdf_path: str) -> str:
         RuntimeError: if the crew runs but produces no output file.
     """
     settings.validate()
+    init_db()
 
-    resume_text_preview = extract_resume_text(resume_pdf_path)
+    resume_text_full = extract_resume_text(resume_pdf_path)
+    resume_text_preview = resume_text_full
     if len(resume_text_preview) > MAX_RESUME_PREVIEW_CHARS:
         resume_text_preview = (
             resume_text_preview[:MAX_RESUME_PREVIEW_CHARS]
             + "\n\n[...resume truncated for length; full text remains searchable via the PDF tool...]"
         )
+
+    filename = original_filename or Path(resume_pdf_path).name
+    resume_id = save_resume(filename=filename, raw_text=resume_text_full)
 
     agents = build_all_agents(resume_pdf_path)
     report_output_path = str(settings.REPORTS_DIR / settings.REPORT_FILENAME)
@@ -71,4 +81,11 @@ def run_career_crew(resume_pdf_path: str) -> str:
             "Crew finished but no report file was produced. Check agent logs."
         )
 
-    return output_path.read_text(encoding="utf-8")
+    report_markdown = output_path.read_text(encoding="utf-8")
+    report_id = save_report(resume_id=resume_id, report_markdown=report_markdown)
+
+    return {
+        "report_markdown": report_markdown,
+        "resume_id": resume_id,
+        "report_id": report_id,
+    }

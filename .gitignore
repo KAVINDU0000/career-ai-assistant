@@ -6,5 +6,6 @@ data/*
 !data/.gitkeep
 reports/*
 !reports/.gitkeep
+career_assistant.db
 .pytest_cache/
 *.egg-info/

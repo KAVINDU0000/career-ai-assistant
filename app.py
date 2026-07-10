@@ -114,11 +114,11 @@ if uploaded_file is not None:
                     int((i / len(PIPELINE_STAGES)) * 100), text=stage
                 )
 
-            report_md = run_career_crew(resume_path)
+            report_md = run_career_crew(resume_path, original_filename=uploaded_file.name)["report_markdown"]
 
             progress_bar.progress(100, text=PIPELINE_STAGES[-1])
             st.session_state["report_md"] = report_md
-            st.success("Analysis complete!")
+            st.success("Analysis complete! Saved to your report history.")
 
         except (FileNotFoundError, ValueError) as exc:
             st.error(f"Could not read resume: {exc}")
