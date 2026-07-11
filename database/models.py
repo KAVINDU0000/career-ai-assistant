@@ -23,16 +23,31 @@ class Base(DeclarativeBase):
     pass
 
 
+class User(Base):
+    """A registered user account."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    resumes = relationship("Resume", back_populates="user", cascade="all, delete-orphan")
+
+
 class Resume(Base):
-    """A single uploaded resume file and its extracted text."""
+    """A single uploaded resume file and its extracted text, owned by a user."""
 
     __tablename__ = "resumes"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     filename = Column(String(255), nullable=False)
     uploaded_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     raw_text = Column(Text, nullable=False)
 
+    user = relationship("User", back_populates="resumes")
     reports = relationship("Report", back_populates="resume", cascade="all, delete-orphan")
 
 

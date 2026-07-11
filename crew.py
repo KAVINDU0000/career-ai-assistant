@@ -26,13 +26,15 @@ from database.crud import save_resume, save_report
 MAX_RESUME_PREVIEW_CHARS = 6000
 
 
-def run_career_crew(resume_pdf_path: str, original_filename: str = None) -> dict:
+def run_career_crew(resume_pdf_path: str, user_id: int, original_filename: str = None) -> dict:
     """
     Execute the full career-analysis pipeline for one resume, and persist
-    both the resume and the generated report to the database.
+    both the resume and the generated report to the database under the
+    given user's account.
 
     Args:
         resume_pdf_path: Absolute path to the uploaded resume PDF.
+        user_id: id of the logged-in user this resume belongs to.
         original_filename: The user's original filename, for display in the
             History page. Falls back to the path's basename if not given.
 
@@ -56,7 +58,7 @@ def run_career_crew(resume_pdf_path: str, original_filename: str = None) -> dict
         )
 
     filename = original_filename or Path(resume_pdf_path).name
-    resume_id = save_resume(filename=filename, raw_text=resume_text_full)
+    resume_id = save_resume(user_id=user_id, filename=filename, raw_text=resume_text_full)
 
     agents = build_all_agents(resume_pdf_path)
     report_output_path = str(settings.REPORTS_DIR / settings.REPORT_FILENAME)

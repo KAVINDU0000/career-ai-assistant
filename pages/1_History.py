@@ -1,29 +1,39 @@
 """
 pages/1_History.py
 ---------------------
-Streamlit page (auto-detected from the pages/ folder) showing every past
-career report, pulled from the SQLite database. Lets the user browse,
-reopen, re-download, or delete past analyses without re-running the crew.
+Streamlit page showing the logged-in user's past career reports, pulled
+from the SQLite database and scoped strictly to their own account.
 """
 
 import streamlit as st
 
-from config import settings
 from database.db import init_db
-from database.crud import get_all_reports, get_report_by_id, delete_report
+from database.crud import get_all_reports, delete_report
+from auth_ui import render_auth_gate, render_user_badge_and_logout
+from styles import inject_custom_css, render_hero
 
 st.set_page_config(page_title="Report History", page_icon="🗂️", layout="wide")
-st.title("🗂️ Report History")
-st.caption("Every past resume analysis, saved automatically when you run Analyze.")
+inject_custom_css()
+
+if not render_auth_gate():
+    st.stop()
+
+render_user_badge_and_logout()
+
+render_hero(
+    title="🗂️ Report History",
+    subtitle="Every past resume analysis you've run, saved automatically.",
+    badge="YOUR REPORTS",
+)
 
 init_db()
 
-reports = get_all_reports()
+user_id = st.session_state["user"]["id"]
+reports = get_all_reports(user_id)
 
 if not reports:
     st.info("No reports yet - analyze a resume on the main page to see it appear here.")
 else:
-    # --- List view: one row per report ---
     st.subheader(f"{len(reports)} report(s)")
 
     for r in reports:
@@ -42,7 +52,7 @@ else:
                 )
             with col2:
                 if st.button("🗑️ Delete", key=f"delete_{r['id']}"):
-                    delete_report(r["id"])
+                    delete_report(user_id, r["id"])
                     st.rerun()
 
             st.markdown("---")

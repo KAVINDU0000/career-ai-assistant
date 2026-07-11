@@ -4,28 +4,39 @@ app.py
 Streamlit front-end for the Career AI Assistant.
 
 Flow:
-1. User uploads a resume PDF.
-2. User clicks "Analyze".
-3. A progress bar reflects the pipeline stages while the CrewAI crew runs.
-4. Results (resume summary, skill charts, jobs, interview questions,
-   roadmap) are displayed, and the full report is downloadable.
+1. User logs in or signs up (auth_ui.render_auth_gate).
+2. User uploads a resume PDF.
+3. User clicks "Analyze".
+4. A progress bar reflects the pipeline stages while the CrewAI crew runs.
+5. Results are displayed in tabs, saved to the user's history, and the
+   full report is downloadable.
 """
 
 import re
 import uuid
-from pathlib import Path
 
 import streamlit as st
 
 from config import settings
 from crew import run_career_crew
+from auth_ui import render_auth_gate, render_user_badge_and_logout
+from styles import inject_custom_css, render_hero
 
 # --- Page setup ---
 st.set_page_config(page_title="AI Career Assistant", page_icon="🧭", layout="wide")
-st.title("🧭 Agentic AI Career Assistant")
-st.caption(
-    "Upload your resume and get an AI-generated skill analysis, job matches, "
-    "interview questions, and a personalized learning roadmap."
+inject_custom_css()
+
+# --- Auth gate: stop here if not logged in ---
+if not render_auth_gate():
+    st.stop()
+
+render_user_badge_and_logout()
+
+render_hero(
+    title="🧭 Agentic AI Career Assistant",
+    subtitle="Upload your resume and get an AI-generated skill analysis, job matches, "
+             "interview questions, and a personalized learning roadmap.",
+    badge="MULTI-AGENT AI",
 )
 
 PIPELINE_STAGES = [
@@ -42,16 +53,9 @@ def split_report_sections(report_md: str) -> dict:
     """
     Split the combined career_report.md into its top-level (##) sections
     so the UI can render each one in its own tab instead of one giant blob.
-
-    Args:
-        report_md: Full Markdown text of the report.
-
-    Returns:
-        Dict mapping section title -> section body text.
     """
     sections = {}
     parts = re.split(r"^##\s+(.*)$", report_md, flags=re.MULTILINE)
-    # parts[0] is any preamble before the first heading; skip it if empty.
     for i in range(1, len(parts), 2):
         title = parts[i].strip()
         body = parts[i + 1].strip() if i + 1 < len(parts) else ""
@@ -62,17 +66,8 @@ def split_report_sections(report_md: str) -> dict:
 def save_uploaded_pdf(uploaded_file) -> str:
     """
     Persist an uploaded Streamlit file to disk inside this project's own
-    data/ directory (rather than the OS temp folder), since PDFSearchTool's
-    path-safety check only permits reading files from within an allowed
-    directory tree.
-
-    Each upload gets a unique filename so concurrent sessions never collide.
-
-    Args:
-        uploaded_file: The Streamlit UploadedFile object.
-
-    Returns:
-        Absolute path to the saved PDF file.
+    data/ directory, since PDFSearchTool's path-safety check only permits
+    reading files from within an allowed directory tree.
     """
     settings.DATA_DIR.mkdir(parents=True, exist_ok=True)
     unique_name = f"resume_{uuid.uuid4().hex}.pdf"
@@ -91,7 +86,8 @@ with st.sidebar:
     st.write(f"Model: `{settings.OPENAI_MODEL_NAME}`")
 
 # --- Upload + analyze ---
-uploaded_file = st.file_uploader("Upload your resume (PDF)", type=["pdf"])
+st.subheader("📄 Upload your resume")
+uploaded_file = st.file_uploader("PDF only", type=["pdf"], label_visibility="collapsed")
 
 if uploaded_file is not None:
     size_mb = len(uploaded_file.getvalue()) / (1024 * 1024)
@@ -100,21 +96,23 @@ if uploaded_file is not None:
             f"File is {size_mb:.1f} MB, which exceeds the "
             f"{settings.MAX_RESUME_FILE_MB} MB limit."
         )
-    elif st.button("Analyze", type="primary"):
+    elif st.button("✨ Analyze", type="primary"):
         progress_bar = st.progress(0, text=PIPELINE_STAGES[0])
         try:
             resume_path = save_uploaded_pdf(uploaded_file)
+            user_id = st.session_state["user"]["id"]
 
-            # The crew runs as one blocking call under the hood. We can't get
-            # true per-agent progress callbacks without deeper CrewAI hooks,
-            # so we animate the bar through the known stages to keep the
-            # user informed while `run_career_crew` executes.
             for i, stage in enumerate(PIPELINE_STAGES[:-1]):
                 progress_bar.progress(
                     int((i / len(PIPELINE_STAGES)) * 100), text=stage
                 )
 
-            report_md = run_career_crew(resume_path, original_filename=uploaded_file.name)["report_markdown"]
+            result = run_career_crew(
+                resume_path,
+                user_id=user_id,
+                original_filename=uploaded_file.name,
+            )
+            report_md = result["report_markdown"]
 
             progress_bar.progress(100, text=PIPELINE_STAGES[-1])
             st.session_state["report_md"] = report_md
@@ -124,11 +122,12 @@ if uploaded_file is not None:
             st.error(f"Could not read resume: {exc}")
         except EnvironmentError as exc:
             st.error(f"Configuration error: {exc}")
-        except Exception as exc:  # noqa: BLE001 - surface any crew failure to the user
+        except Exception as exc:  # noqa: BLE001
             st.error(f"Something went wrong while analyzing your resume: {exc}")
 
 # --- Results display ---
 if "report_md" in st.session_state:
+    st.divider()
     report_md = st.session_state["report_md"]
     sections = split_report_sections(report_md)
 
