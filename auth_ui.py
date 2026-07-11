@@ -13,6 +13,19 @@ from database.db import init_db
 from database.auth import register_user, verify_login, AuthError
 from styles import render_hero, render_feature_cards
 
+# Keys in st.session_state that hold data from a specific user's analysis
+# session. These must be cleared on every login, signup, and logout -
+# otherwise Streamlit's session state (which persists across the whole
+# browser tab, not per-account) can leak one user's report to whoever
+# logs into that same browser tab next.
+_ANALYSIS_STATE_KEYS = ["report_md"]
+
+
+def _clear_analysis_state() -> None:
+    """Remove any leftover analysis results from session state."""
+    for key in _ANALYSIS_STATE_KEYS:
+        st.session_state.pop(key, None)
+
 
 def render_auth_gate() -> bool:
     """
@@ -55,6 +68,7 @@ def render_auth_gate() -> bool:
                     if user is None:
                         st.error("Incorrect email or password.")
                     else:
+                        _clear_analysis_state()
                         st.session_state["user"] = user
                         st.rerun()
 
@@ -71,6 +85,7 @@ def render_auth_gate() -> bool:
                     else:
                         try:
                             user_id = register_user(new_email, new_password)
+                            _clear_analysis_state()
                             st.session_state["user"] = {"id": user_id, "email": new_email.strip().lower()}
                             st.success("Account created! Redirecting...")
                             st.rerun()
@@ -99,4 +114,5 @@ def render_user_badge_and_logout() -> None:
         st.markdown(f"**Signed in as**  \n{user['email']}")
         if st.button("Log out", use_container_width=True):
             del st.session_state["user"]
+            _clear_analysis_state()
             st.rerun()
