@@ -60,7 +60,7 @@ def run_career_crew(resume_pdf_path: str, user_id: int, original_filename: str =
     filename = original_filename or Path(resume_pdf_path).name
     resume_id = save_resume(user_id=user_id, filename=filename, raw_text=resume_text_full)
 
-    agents = build_all_agents(resume_pdf_path)
+    agents = build_all_agents()
     report_output_path = str(settings.REPORTS_DIR / settings.REPORT_FILENAME)
     tasks = build_all_tasks(agents, resume_text_preview, report_output_path)
 
@@ -75,15 +75,25 @@ def run_career_crew(resume_pdf_path: str, user_id: int, original_filename: str =
         max_rpm=5,
     )
 
-    crew.kickoff()
+    # kickoff() returns a CrewOutput whose .raw attribute already holds the
+    # final task's text output in memory. We use that directly rather than
+    # reading the report back from disk - some hosting environments (e.g.
+    # Streamlit Community Cloud's mounted filesystem) can silently fail to
+    # persist the output_file write, even though the crew itself completes
+    # successfully. Relying on the in-memory result removes that entire
+    # class of failure. The physical file (written via each Task's
+    # output_file setting) is kept as a convenience for local runs, but is
+    # no longer required for the app to function.
+    result = crew.kickoff()
+    report_markdown = (result.raw or "").strip()
 
-    output_path = Path(report_output_path)
-    if not output_path.exists():
+    if not report_markdown:
         raise RuntimeError(
-            "Crew finished but no report file was produced. Check agent logs."
+            "The crew completed but produced an empty report. This usually "
+            "means one of the agents hit an error or rate limit mid-run - "
+            "check the app logs for details."
         )
 
-    report_markdown = output_path.read_text(encoding="utf-8")
     report_id = save_report(resume_id=resume_id, report_markdown=report_markdown)
 
     return {

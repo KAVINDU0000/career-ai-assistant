@@ -14,16 +14,15 @@ def build_resume_analysis_task(agent, resume_text_preview: str) -> Task:
     Args:
         agent: The Resume Analysis Agent.
         resume_text_preview: Raw extracted text from the PDF, injected directly
-            into the prompt as a guaranteed source of truth alongside the
-            agent's PDFSearchTool.
+            into the prompt as the sole source of truth.
 
     Returns:
         Configured Task instance.
     """
     return Task(
         description=(
-            "Analyze the candidate's resume below and the attached PDF search "
-            "tool to extract a complete structured summary.\n\n"
+            "Analyze the candidate's resume below to extract a complete "
+            "structured summary.\n\n"
             "--- RAW RESUME TEXT (ground truth, may be imperfectly formatted) ---\n"
             f"{resume_text_preview}\n"
             "--- END RAW RESUME TEXT ---\n\n"
