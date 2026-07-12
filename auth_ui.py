@@ -11,7 +11,7 @@ import streamlit as st
 
 from database.db import init_db
 from database.auth import register_user, verify_login, AuthError
-from styles import render_hero, render_feature_cards
+from styles import render_hero, render_stats_bar, render_feature_cards, render_how_it_works, render_footer
 
 # Keys in st.session_state that hold data from a specific user's analysis
 # session. These must be cleared on every login, signup, and logout -
@@ -50,7 +50,9 @@ def render_auth_gate() -> bool:
         badge="MULTI-AGENT AI · FREE TO USE",
     )
 
+    render_stats_bar()
     render_feature_cards()
+    render_how_it_works()
 
     _, center, _ = st.columns([1, 1.1, 1])
     with center:
@@ -95,12 +97,16 @@ def render_auth_gate() -> bool:
 
     st.markdown(
         """
-        <p style="text-align:center; color:#6B7280; font-size:0.82rem; margin-top:1.5rem;">
-            Your data stays private - each account only ever sees its own reports.
-        </p>
+        <div class="trust-line">
+            <span>🔒 Bank-grade password hashing</span>
+            <span>🚫 No credit card required</span>
+            <span>👤 Your data stays private</span>
+        </div>
         """,
         unsafe_allow_html=True,
     )
+
+    render_footer()
 
     return False
 
