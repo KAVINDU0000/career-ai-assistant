@@ -18,6 +18,7 @@ from styles import (
     render_feature_cards,
     render_how_it_works,
     render_footer,
+    _clean,
 )
 
 # Keys in st.session_state that hold data from a specific user's analysis
@@ -61,16 +62,13 @@ def render_auth_gate() -> bool:
 
     with left:
         st.markdown(
-            """
+            _clean("""
             <div class="auth-value-title">Ready to see where you stand?</div>
-            <div class="auth-value-text">
-                Create a free account to save your reports, track your progress
-                over time, and revisit your personalized roadmap whenever you need it.
-            </div>
+            <div class="auth-value-text">Create a free account to save your reports, track your progress over time, and revisit your personalized roadmap whenever you need it.</div>
             <div class="auth-value-point">✅ &nbsp; Unlimited resume analyses</div>
             <div class="auth-value-point">✅ &nbsp; Full report history, always accessible</div>
             <div class="auth-value-point">✅ &nbsp; Your data is never shared with other accounts</div>
-            """,
+            """),
             unsafe_allow_html=True,
         )
 
@@ -117,13 +115,13 @@ def render_auth_gate() -> bool:
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
-        """
+        _clean("""
         <div class="trust-line">
             <span>🔒 Bank-grade password hashing</span>
             <span>🚫 No credit card required</span>
             <span>👤 Your data stays private</span>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 

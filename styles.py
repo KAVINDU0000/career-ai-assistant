@@ -10,12 +10,35 @@ palette, paired with .streamlit/config.toml for the base theme.
 import streamlit as st
 
 NAVY = "#0A3161"
-NAVY_DARK = "#082848"
 BLUE = "#0A66C2"
 LIGHT_BLUE = "#EAF2FD"
 TEXT = "#1D2226"
 MUTED = "#5E6B7A"
 BORDER = "#E0E4E9"
+
+# Dark-mode colors used specifically for the mockup "app screenshot" card,
+# which intentionally contrasts with the light page around it.
+DARK_BG = "#12151C"
+DARK_PANEL = "#1B1F2A"
+DARK_BORDER = "#2A2F3D"
+DARK_MUTED = "#8B93A5"
+
+
+def _clean(html: str) -> str:
+    """
+    Strip leading/trailing whitespace from every line of a multi-line HTML
+    string before handing it to st.markdown.
+
+    Markdown treats any line indented 4+ spaces as a preformatted code
+    block. Nested HTML written with Python's normal indentation easily
+    triggers this, causing part of the markup to render as literal text
+    instead of being parsed as HTML. Flattening indentation here prevents
+    that regardless of how deeply nested the source looks in the .py file.
+    Every render_* function in this module MUST pass its HTML through this
+    before calling st.markdown.
+    """
+    return "\n".join(line.strip() for line in html.strip().splitlines())
+
 
 CUSTOM_CSS = f"""
 <style>
@@ -25,8 +48,17 @@ html, body, [class*="css"] {{
     font-family: 'Inter', -apple-system, sans-serif;
 }}
 
+/* Fully hide Streamlit's own fixed header (hamburger/Deploy/Share/star
+   icons). It sits at a fixed position at the very top of the page and
+   was overlapping our custom brand bar. Hiding it entirely - rather than
+   just adjusting padding to clear its height - guarantees this can never
+   happen again regardless of viewport size. */
+header[data-testid="stHeader"] {{
+    display: none !important;
+}}
+
 .block-container {{
-    padding-top: 1.6rem;
+    padding-top: 2.2rem;
     max-width: 1160px;
 }}
 
@@ -126,19 +158,19 @@ html, body, [class*="css"] {{
     flex-shrink: 0;
 }}
 
-/* ---------- Hero mockup (fake product preview) ---------- */
+/* ---------- Hero mockup: dark "app screenshot" preview ---------- */
 .mockup-card {{
-    background: #FFFFFF;
-    border: 1px solid {BORDER};
+    background: {DARK_BG};
+    border: 1px solid {DARK_BORDER};
     border-radius: 14px;
-    box-shadow: 0 20px 50px rgba(10, 49, 97, 0.14);
+    box-shadow: 0 20px 50px rgba(10, 49, 97, 0.2);
     overflow: hidden;
     animation: fadeInUp 0.7s ease both;
     animation-delay: 0.15s;
 }}
 .mockup-titlebar {{
-    background: #F6F7F9;
-    border-bottom: 1px solid {BORDER};
+    background: {DARK_PANEL};
+    border-bottom: 1px solid {DARK_BORDER};
     padding: 0.6rem 0.9rem;
     display: flex;
     align-items: center;
@@ -153,36 +185,37 @@ html, body, [class*="css"] {{
     align-items: center;
     margin-bottom: 0.7rem;
 }}
-.mockup-label {{ font-size: 0.8rem; color: {MUTED}; font-weight: 600; }}
-.mockup-score {{ font-size: 0.95rem; color: {BLUE}; font-weight: 800; }}
+.mockup-label {{ font-size: 0.8rem; color: {DARK_MUTED}; font-weight: 600; letter-spacing: 0.03em; }}
+.mockup-score {{ font-size: 0.95rem; color: #5EA1FF; font-weight: 800; }}
 
 .mockup-bar-track {{
     height: 7px;
     border-radius: 4px;
-    background: #EEF1F4;
+    background: {DARK_PANEL};
     overflow: hidden;
     margin-bottom: 1rem;
 }}
 .mockup-bar-fill {{
     height: 100%;
     border-radius: 4px;
-    background: linear-gradient(90deg, {BLUE}, {NAVY});
+    background: linear-gradient(90deg, #5EA1FF, #A78BFA);
 }}
 
 .mockup-chip-row {{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }}
 .mockup-chip {{
-    background: {LIGHT_BLUE};
-    color: {BLUE};
+    background: rgba(94, 161, 255, 0.14);
+    color: #8FBBFF;
     font-size: 0.72rem;
     font-weight: 700;
     padding: 0.3rem 0.65rem;
     border-radius: 999px;
+    border: 1px solid rgba(94, 161, 255, 0.25);
 }}
 
 .mockup-timeline {{ display: flex; align-items: center; gap: 0.3rem; }}
-.mockup-tl-dot {{ width: 8px; height: 8px; border-radius: 50%; background: {BLUE}; }}
-.mockup-tl-line {{ flex: 1; height: 2px; background: {BORDER}; }}
-.mockup-tl-label {{ font-size: 0.68rem; color: {MUTED}; margin-top: 0.3rem; }}
+.mockup-tl-dot {{ width: 8px; height: 8px; border-radius: 50%; background: #5EA1FF; flex-shrink: 0; }}
+.mockup-tl-line {{ flex: 1; height: 2px; background: {DARK_BORDER}; }}
+.mockup-tl-label {{ font-size: 0.68rem; color: {DARK_MUTED}; margin-top: 0.3rem; }}
 
 /* ---------- Stats bar ---------- */
 .stats-bar {{
@@ -414,12 +447,12 @@ def inject_custom_css() -> None:
 def render_brand_bar() -> None:
     """Render a small logo + brand name bar at the very top."""
     st.markdown(
-        """
+        _clean("""
         <div class="brand-bar">
             <div class="brand-logo">🧭</div>
             <div class="brand-name">Career AI Assistant</div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -430,25 +463,24 @@ def render_hero_two_column() -> None:
 
     with left:
         st.markdown(
-            f"""
+            _clean(f"""
             <div class="hero-section">
                 <div class="hero-badge">✨ MULTI-AGENT AI · FREE TO USE</div>
                 <div class="hero-title">Turn your resume into a<br><span class="accent">complete career strategy</span></div>
-                <div class="hero-subtitle">Six specialized AI agents analyze your resume and deliver skill
-                analysis, job matches, interview prep, and a personalized roadmap - in minutes, not days.</div>
+                <div class="hero-subtitle">Six specialized AI agents analyze your resume and deliver skill analysis, job matches, interview prep, and a personalized roadmap - in minutes, not days.</div>
                 <div class="hero-checklist">
                     <div class="hero-check-item"><span class="hero-check-icon">✓</span> Field-adaptive - no generic templates</div>
                     <div class="hero-check-item"><span class="hero-check-icon">✓</span> Full report in under 5 minutes</div>
                     <div class="hero-check-item"><span class="hero-check-icon">✓</span> 100% free, no credit card required</div>
                 </div>
             </div>
-            """,
+            """),
             unsafe_allow_html=True,
         )
 
     with right:
         st.markdown(
-            """
+            _clean("""
             <div class="mockup-card">
                 <div class="mockup-titlebar">
                     <div class="mockup-dot" style="background:#FF5F57;"></div>
@@ -461,7 +493,6 @@ def render_hero_two_column() -> None:
                         <span class="mockup-score">85/100</span>
                     </div>
                     <div class="mockup-bar-track"><div class="mockup-bar-fill" style="width:85%;"></div></div>
-
                     <div class="mockup-row">
                         <span class="mockup-label">TOP JOB MATCHES</span>
                     </div>
@@ -470,14 +501,11 @@ def render_hero_two_column() -> None:
                         <span class="mockup-chip">Data Scientist · 87%</span>
                         <span class="mockup-chip">ML Engineer · 84%</span>
                     </div>
-
                     <div class="mockup-row">
                         <span class="mockup-label">LEARNING ROADMAP</span>
                     </div>
                     <div class="mockup-timeline">
-                        <div class="mockup-tl-dot"></div><div class="mockup-tl-line"></div>
-                        <div class="mockup-tl-dot"></div><div class="mockup-tl-line"></div>
-                        <div class="mockup-tl-dot"></div>
+                        <div class="mockup-tl-dot"></div><div class="mockup-tl-line"></div><div class="mockup-tl-dot"></div><div class="mockup-tl-line"></div><div class="mockup-tl-dot"></div>
                     </div>
                     <div style="display:flex; justify-content:space-between;">
                         <span class="mockup-tl-label">30 days</span>
@@ -486,7 +514,7 @@ def render_hero_two_column() -> None:
                     </div>
                 </div>
             </div>
-            """,
+            """),
             unsafe_allow_html=True,
         )
 
@@ -495,13 +523,13 @@ def render_hero(title: str, subtitle: str, badge: str = None) -> None:
     """Kept for pages that still want a simple single hero banner (e.g. History page)."""
     badge_html = f'<div class="hero-badge">{badge}</div>' if badge else ""
     st.markdown(
-        f"""
+        _clean(f"""
         <div class="hero-section" style="text-align:center;">
             {badge_html}
             <div class="hero-title" style="font-size:2rem;">{title}</div>
             <div class="hero-subtitle" style="margin:0 auto;">{subtitle}</div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -509,14 +537,14 @@ def render_hero(title: str, subtitle: str, badge: str = None) -> None:
 def render_stats_bar() -> None:
     """Render a small trust/stats strip under the hero."""
     st.markdown(
-        """
+        _clean("""
         <div class="stats-bar">
             <div class="stat-item"><div class="stat-number">6</div><div class="stat-label">AI Agents</div></div>
             <div class="stat-item"><div class="stat-number">100%</div><div class="stat-label">Free to Use</div></div>
             <div class="stat-item"><div class="stat-number">&lt;5 min</div><div class="stat-label">Per Analysis</div></div>
             <div class="stat-item"><div class="stat-number">Private</div><div class="stat-label">Data Stays Yours</div></div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -524,7 +552,7 @@ def render_stats_bar() -> None:
 def render_feature_cards() -> None:
     """Render the 3-card feature grid, with a section label above it."""
     st.markdown(
-        """
+        _clean("""
         <div class="section-label">WHAT YOU GET</div>
         <div class="section-title">Everything you need to plan your next move</div>
         <div class="feature-grid">
@@ -544,7 +572,7 @@ def render_feature_cards() -> None:
                 <div class="feature-desc">A 30/60/90-day plan with courses, certifications, and projects to close your gaps.</div>
             </div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -552,7 +580,7 @@ def render_feature_cards() -> None:
 def render_how_it_works() -> None:
     """Render a connected 3-step timeline."""
     st.markdown(
-        """
+        _clean("""
         <div class="section-label">GETTING STARTED</div>
         <div class="section-title">Three steps to your career report</div>
         <div class="howitworks-wrap">
@@ -560,7 +588,7 @@ def render_how_it_works() -> None:
             <div class="howitworks-step"><div class="howitworks-num">2</div><div class="howitworks-text">Upload your resume</div></div>
             <div class="howitworks-step"><div class="howitworks-num">3</div><div class="howitworks-text">Get your full report</div></div>
         </div>
-        """,
+        """),
         unsafe_allow_html=True,
     )
 
@@ -568,6 +596,6 @@ def render_how_it_works() -> None:
 def render_footer() -> None:
     """Render a small footer at the bottom of the page."""
     st.markdown(
-        '<div class="app-footer">Built with CrewAI + OpenAI · Career AI Assistant</div>',
+        _clean('<div class="app-footer">Built with CrewAI + OpenAI · Career AI Assistant</div>'),
         unsafe_allow_html=True,
     )
