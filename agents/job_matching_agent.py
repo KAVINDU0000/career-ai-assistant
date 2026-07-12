@@ -10,7 +10,11 @@ and career growth outlook.
 IMPORTANT: This agent must first identify the candidate's actual field
 (from their resume) and only recommend jobs within or adjacent to that
 field. It must never default to tech/AI job titles for non-technical
-candidates.
+candidates. It must also infer the candidate's location from the resume
+(address, phone country code, city/country mentions) and quote salary
+ranges in that country's local currency at realistic current market
+rates - not generic USD figures that don't reflect the candidate's
+actual job market.
 """
 
 from crewai import Agent
@@ -34,23 +38,33 @@ def build_job_matching_agent(llm) -> Agent:
             "marketing, finance, education, hospitality, design, law, "
             "manufacturing, or any other field - do not assume it is tech "
             "unless the resume's education, experience, and skills actually "
-            "support that). Then recommend 3-5 job roles that are genuinely "
-            "suitable for THIS candidate's demonstrated background, each with "
-            "a matching score out of 100, clear reasoning tied to specific "
-            "resume evidence, required missing skills, an approximate salary "
-            "range, and career growth potential."
+            "support that). Also identify the candidate's country/location "
+            "from any address, phone number country code, or city/country "
+            "mentioned in the resume. Then recommend 3-5 job roles that are "
+            "genuinely suitable for THIS candidate's demonstrated background, "
+            "each with a matching score out of 100, clear reasoning tied to "
+            "specific resume evidence, required missing skills, a realistic "
+            "salary range in that candidate's LOCAL CURRENCY reflecting "
+            "actual current market rates for that country and role (e.g. "
+            "LKR for Sri Lanka, INR for India, USD for the US) - not a "
+            "generic global figure - and career growth potential."
         ),
         backstory=(
             "You are a career strategist who has placed candidates across "
-            "every industry - not just tech. You are allergic to generic, "
-            "one-size-fits-all recommendations. Before naming a single job "
-            "title, you always ask yourself: 'what does this specific "
-            "resume's education and experience actually point to?' You "
-            "would never recommend 'AI Engineer' to someone with no "
+            "every industry and country - not just tech, and not just the "
+            "US. You are allergic to generic, one-size-fits-all "
+            "recommendations. Before naming a single job title, you always "
+            "ask yourself: 'what does this specific resume's education and "
+            "experience actually point to, and where is this person based?' "
+            "You would never recommend 'AI Engineer' to someone with no "
             "programming, CS, or data background just because AI jobs are "
             "popular - that would be professionally irresponsible advice. "
-            "Salary ranges you quote are always labeled as approximate "
-            "estimates."
+            "You would also never quote a US-style salary figure to a "
+            "candidate clearly based in Sri Lanka, India, or elsewhere - "
+            "local purchasing power and market rates differ enormously, so "
+            "you always convert your salary estimate to the candidate's own "
+            "country's currency and realistic local pay scale. Salary "
+            "ranges you quote are always labeled as approximate estimates."
         ),
         llm=llm,
         verbose=True,
