@@ -11,7 +11,14 @@ import streamlit as st
 
 from database.db import init_db
 from database.auth import register_user, verify_login, AuthError
-from styles import render_hero, render_stats_bar, render_feature_cards, render_how_it_works, render_footer
+from styles import (
+    render_brand_bar,
+    render_hero_two_column,
+    render_stats_bar,
+    render_feature_cards,
+    render_how_it_works,
+    render_footer,
+)
 
 # Keys in st.session_state that hold data from a specific user's analysis
 # session. These must be cleared on every login, signup, and logout -
@@ -29,7 +36,8 @@ def _clear_analysis_state() -> None:
 
 def render_auth_gate() -> bool:
     """
-    Render a landing page with a login/signup form if no user is logged in.
+    Render a full landing page with a login/signup form if no user is
+    logged in.
 
     Returns:
         True if a user is already authenticated - callers should proceed
@@ -42,20 +50,31 @@ def render_auth_gate() -> bool:
     if "user" in st.session_state:
         return True
 
-    render_hero(
-        title="🧭 Career AI Assistant",
-        subtitle="Six specialized AI agents turn your resume into a complete career "
-                 "strategy - skill analysis, job matches, interview prep, and a "
-                 "personalized roadmap, in minutes.",
-        badge="MULTI-AGENT AI · FREE TO USE",
-    )
-
+    render_brand_bar()
+    render_hero_two_column()
     render_stats_bar()
     render_feature_cards()
     render_how_it_works()
 
-    _, center, _ = st.columns([1, 1.1, 1])
-    with center:
+    st.markdown('<div class="auth-section-wrap">', unsafe_allow_html=True)
+    left, right = st.columns([1, 1.1], gap="large")
+
+    with left:
+        st.markdown(
+            """
+            <div class="auth-value-title">Ready to see where you stand?</div>
+            <div class="auth-value-text">
+                Create a free account to save your reports, track your progress
+                over time, and revisit your personalized roadmap whenever you need it.
+            </div>
+            <div class="auth-value-point">✅ &nbsp; Unlimited resume analyses</div>
+            <div class="auth-value-point">✅ &nbsp; Full report history, always accessible</div>
+            <div class="auth-value-point">✅ &nbsp; Your data is never shared with other accounts</div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    with right:
         st.markdown('<div class="auth-card-wrap">', unsafe_allow_html=True)
         login_tab, signup_tab = st.tabs(["Log In", "Sign Up"])
 
@@ -94,6 +113,8 @@ def render_auth_gate() -> bool:
                         except AuthError as exc:
                             st.error(str(exc))
         st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown(
         """
