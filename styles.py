@@ -288,7 +288,7 @@ def render_brand_bar() -> None:
         _clean("""
         <div class="brand-bar">
             <div class="brand-logo">🧭</div>
-            <div class="brand-name">Career AI Assistant</div>
+            <div class="brand-name">CareerCompass</div>
         </div>
         """),
         unsafe_allow_html=True,
@@ -439,6 +439,6 @@ def render_section_label(label: str) -> None:
 def render_footer() -> None:
     """Render a small footer at the bottom of the page."""
     st.markdown(
-        _clean('<div class="app-footer">Built with CrewAI + OpenAI · Career AI Assistant</div>'),
+        _clean('<div class="app-footer">Built with CrewAI + OpenAI · CareerCompass</div>'),
         unsafe_allow_html=True,
     )

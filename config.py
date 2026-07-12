@@ -1,7 +1,7 @@
 """
 config.py
 ---------
-Centralized configuration for the Career AI Assistant.
+Centralized configuration for CareerCompass.
 
 All environment-dependent values (API keys, model names, paths) live here.
 No other module should read os.environ directly - they import from here instead.

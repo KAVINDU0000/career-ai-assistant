@@ -1,7 +1,7 @@
 """
 app.py
 -------
-Streamlit front-end for the Career AI Assistant.
+Streamlit front-end for CareerCompass.
 
 Flow:
 1. User logs in or signs up (auth_ui.render_auth_gate).
@@ -25,7 +25,7 @@ from database.crud import get_all_reports
 from styles import inject_custom_css, render_brand_bar, render_section_label, _clean
 
 # --- Page setup ---
-st.set_page_config(page_title="AI Career Assistant", page_icon="🧭", layout="wide")
+st.set_page_config(page_title="CareerCompass", page_icon="🧭", layout="wide")
 inject_custom_css()
 
 # --- Auth gate: stop here if not logged in ---

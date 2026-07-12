@@ -1,4 +1,4 @@
-"""Tools package: exposes reusable CrewAI tools for the Career AI Assistant."""
+"""Tools package: exposes reusable CrewAI tools for CareerCompass."""
 
 from .pdf_tool import get_resume_search_tool, extract_resume_text
 

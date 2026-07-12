@@ -10,15 +10,16 @@ import streamlit as st
 from database.db import init_db
 from database.crud import get_all_reports, delete_report
 from auth_ui import render_auth_gate, render_user_badge_and_logout
-from styles import inject_custom_css, render_hero, render_section_label
+from styles import inject_custom_css, render_hero, render_section_label, render_brand_bar
 
-st.set_page_config(page_title="Report History", page_icon="🗂️", layout="wide")
+st.set_page_config(page_title="CareerCompass · History", page_icon="🗂️", layout="wide")
 inject_custom_css()
 
 if not render_auth_gate():
     st.stop()
 
 render_user_badge_and_logout()
+render_brand_bar()
 
 render_hero(
     title="🗂️ Report History",

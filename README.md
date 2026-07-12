@@ -1,4 +1,4 @@
-# 🧭 Career AI Assistant
+# 🧭 CareerCompass
 
 A production-grade, multi-agent career analysis system built with **CrewAI** and **OpenAI's GPT-4o-mini**. Sign up, upload a resume PDF, and get an automated skill analysis, job recommendations, personalized interview questions, a 30/60/90-day learning roadmap, and a polished Markdown career report — all through a Streamlit UI, with authentication and report history persisted per account.
 
