@@ -1,23 +1,49 @@
 """
 styles.py
 -----------
-Shared custom CSS for a genuine SaaS-landing-page-style redesign:
-two-column hero with a live product mockup, connected step timeline,
-upgraded cards, and a split auth layout. Corporate light navy/blue
-palette, paired with .streamlit/config.toml for the base theme.
+Shared custom CSS supporting BOTH a light corporate theme and a full dark
+theme, switchable at runtime via a sidebar toggle. Streamlit's own
+config.toml only sets a single build-time default theme, so to get a
+genuine runtime-switchable light/dark toggle we override Streamlit's core
+app containers directly with CSS driven by st.session_state["theme_mode"].
 """
 
 import streamlit as st
 
-NAVY = "#0A3161"
-BLUE = "#0A66C2"
-LIGHT_BLUE = "#EAF2FD"
-TEXT = "#1D2226"
-MUTED = "#5E6B7A"
-BORDER = "#E0E4E9"
+# ---------------------------------------------------------------------
+# Color palettes for each mode. Every color used anywhere in the custom
+# CSS comes from one of these two dicts, selected by the active mode.
+# ---------------------------------------------------------------------
+LIGHT = {
+    "app_bg": "#FFFFFF",
+    "panel_bg": "#F3F2EF",
+    "card_bg": "#FFFFFF",
+    "sidebar_bg": "#EAF2FD",
+    "text": "#1D2226",
+    "muted": "#5E6B7A",
+    "border": "#E0E4E9",
+    "navy": "#0A3161",
+    "blue": "#0A66C2",
+    "light_blue": "#EAF2FD",
+    "shadow": "rgba(10, 49, 97, 0.14)",
+}
 
-# Dark-mode colors used specifically for the mockup "app screenshot" card,
-# which intentionally contrasts with the light page around it.
+DARK = {
+    "app_bg": "#0E1117",
+    "panel_bg": "#171B24",
+    "card_bg": "#171B24",
+    "sidebar_bg": "#12151C",
+    "text": "#E5E7EB",
+    "muted": "#9AA3B2",
+    "border": "#2A2F3D",
+    "navy": "#0A3161",
+    "blue": "#5EA1FF",
+    "light_blue": "#1B2838",
+    "shadow": "rgba(0, 0, 0, 0.45)",
+}
+
+# The product mockup card always stays dark (like a real app screenshot),
+# regardless of overall site mode, for consistent visual contrast.
 DARK_BG = "#12151C"
 DARK_PANEL = "#1B1F2A"
 DARK_BORDER = "#2A2F3D"
@@ -40,408 +66,264 @@ def _clean(html: str) -> str:
     return "\n".join(line.strip() for line in html.strip().splitlines())
 
 
-CUSTOM_CSS = f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+def get_theme_mode() -> str:
+    """Return the currently active theme mode ('light' or 'dark'), defaulting to light."""
+    return st.session_state.get("theme_mode", "light")
 
-html, body, [class*="css"] {{
-    font-family: 'Inter', -apple-system, sans-serif;
-}}
 
-/* Fully hide Streamlit's own fixed header (hamburger/Deploy/Share/star
-   icons). It sits at a fixed position at the very top of the page and
-   was overlapping our custom brand bar. Hiding it entirely - rather than
-   just adjusting padding to clear its height - guarantees this can never
-   happen again regardless of viewport size. */
-header[data-testid="stHeader"] {{
-    display: none !important;
-}}
+def render_theme_toggle() -> str:
+    """
+    Render a light/dark toggle in the sidebar and return the active mode.
 
-.block-container {{
-    padding-top: 2.2rem;
-    max-width: 1160px;
-}}
+    Must be called before inject_custom_css() so the CSS reflects the
+    choice made in this same run.
+    """
+    with st.sidebar:
+        current = get_theme_mode()
+        options = ["light", "dark"]
+        labels = {"light": "☀️ Light", "dark": "🌙 Dark"}
+        choice = st.radio(
+            "Theme",
+            options=options,
+            format_func=lambda o: labels[o],
+            index=options.index(current),
+            horizontal=True,
+            key="theme_mode_radio",
+        )
+        if choice != current:
+            st.session_state["theme_mode"] = choice
+            st.rerun()
+        st.session_state["theme_mode"] = choice
+    return choice
 
-@keyframes fadeInUp {{
-    from {{ opacity: 0; transform: translateY(14px); }}
-    to   {{ opacity: 1; transform: translateY(0); }}
-}}
 
-/* ---------- Top brand bar ---------- */
-.brand-bar {{
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    padding: 0.4rem 0 1.2rem 0;
-    animation: fadeInUp 0.5s ease both;
-}}
-.brand-logo {{
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    background: linear-gradient(135deg, {NAVY}, {BLUE});
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-}}
-.brand-name {{
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: {TEXT};
-}}
+def _build_css(mode: str) -> str:
+    c = DARK if mode == "dark" else LIGHT
 
-/* ---------- Hero: two-column ---------- */
-.hero-section {{
-    padding: 1rem 0 1.8rem 0;
-    animation: fadeInUp 0.6s ease both;
-}}
+    return f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-.hero-badge {{
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.32rem 0.85rem;
-    border-radius: 6px;
-    background: {LIGHT_BLUE};
-    border: 1px solid #C7DCF7;
-    color: {BLUE};
-    font-size: 0.76rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    margin-bottom: 1.1rem;
-}}
+    html, body, [class*="css"] {{
+        font-family: 'Inter', -apple-system, sans-serif;
+    }}
 
-.hero-title {{
-    font-size: 2.7rem;
-    font-weight: 800;
-    line-height: 1.15;
-    margin: 0 0 1rem 0;
-    color: {TEXT};
-    letter-spacing: -0.02em;
-}}
-.hero-title .accent {{ color: {BLUE}; }}
+    header[data-testid="stHeader"] {{
+        display: none !important;
+    }}
 
-.hero-subtitle {{
-    color: {MUTED};
-    font-size: 1.05rem;
-    line-height: 1.6;
-    margin-bottom: 1.4rem;
-    max-width: 480px;
-}}
+    /* Force Streamlit's core app containers to follow our chosen mode,
+       since config.toml only sets one static theme at build time. */
+    [data-testid="stAppViewContainer"], .main, body {{
+        background-color: {c["app_bg"]} !important;
+        color: {c["text"]} !important;
+    }}
+    section[data-testid="stSidebar"] {{
+        background-color: {c["sidebar_bg"]} !important;
+    }}
+    section[data-testid="stSidebar"] * {{
+        color: {c["text"]} !important;
+    }}
+    p, span, div, label, li {{
+        color: {c["text"]};
+    }}
 
-.hero-checklist {{
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
-    margin-bottom: 0.5rem;
-}}
-.hero-check-item {{
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    font-size: 0.92rem;
-    color: {TEXT};
-    font-weight: 500;
-}}
-.hero-check-icon {{
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: {LIGHT_BLUE};
-    color: {BLUE};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: 800;
-    flex-shrink: 0;
-}}
+    .block-container {{
+        padding-top: 2.2rem;
+        max-width: 1160px;
+    }}
 
-/* ---------- Hero mockup: dark "app screenshot" preview ---------- */
-.mockup-card {{
-    background: {DARK_BG};
-    border: 1px solid {DARK_BORDER};
-    border-radius: 14px;
-    box-shadow: 0 20px 50px rgba(10, 49, 97, 0.2);
-    overflow: hidden;
-    animation: fadeInUp 0.7s ease both;
-    animation-delay: 0.15s;
-}}
-.mockup-titlebar {{
-    background: {DARK_PANEL};
-    border-bottom: 1px solid {DARK_BORDER};
-    padding: 0.6rem 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-}}
-.mockup-dot {{ width: 9px; height: 9px; border-radius: 50%; }}
-.mockup-body {{ padding: 1.2rem 1.3rem 1.4rem 1.3rem; }}
+    @keyframes fadeInUp {{
+        from {{ opacity: 0; transform: translateY(14px); }}
+        to   {{ opacity: 1; transform: translateY(0); }}
+    }}
 
-.mockup-row {{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.7rem;
-}}
-.mockup-label {{ font-size: 0.8rem; color: {DARK_MUTED}; font-weight: 600; letter-spacing: 0.03em; }}
-.mockup-score {{ font-size: 0.95rem; color: #5EA1FF; font-weight: 800; }}
+    /* ---------- Brand bar ---------- */
+    .brand-bar {{
+        display: flex; align-items: center; gap: 0.6rem;
+        padding: 0.4rem 0 1.2rem 0;
+        animation: fadeInUp 0.5s ease both;
+    }}
+    .brand-logo {{
+        width: 34px; height: 34px; border-radius: 8px;
+        background: linear-gradient(135deg, {c["navy"]}, {c["blue"]});
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem;
+    }}
+    .brand-name {{ font-weight: 800; font-size: 1.1rem; color: {c["text"]}; }}
 
-.mockup-bar-track {{
-    height: 7px;
-    border-radius: 4px;
-    background: {DARK_PANEL};
-    overflow: hidden;
-    margin-bottom: 1rem;
-}}
-.mockup-bar-fill {{
-    height: 100%;
-    border-radius: 4px;
-    background: linear-gradient(90deg, #5EA1FF, #A78BFA);
-}}
+    /* ---------- Hero ---------- */
+    .hero-section {{ padding: 1rem 0 1.8rem 0; animation: fadeInUp 0.6s ease both; }}
+    .hero-badge {{
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        padding: 0.32rem 0.85rem; border-radius: 6px;
+        background: {c["light_blue"]}; border: 1px solid {c["border"]};
+        color: {c["blue"]}; font-size: 0.76rem; font-weight: 700;
+        letter-spacing: 0.03em; margin-bottom: 1.1rem;
+    }}
+    .hero-title {{
+        font-size: 2.7rem; font-weight: 800; line-height: 1.15;
+        margin: 0 0 1rem 0; color: {c["text"]}; letter-spacing: -0.02em;
+    }}
+    .hero-title .accent {{ color: {c["blue"]}; }}
+    .hero-subtitle {{
+        color: {c["muted"]}; font-size: 1.05rem; line-height: 1.6;
+        margin-bottom: 1.4rem; max-width: 480px;
+    }}
+    .hero-checklist {{ display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 0.5rem; }}
+    .hero-check-item {{
+        display: flex; align-items: center; gap: 0.55rem;
+        font-size: 0.92rem; color: {c["text"]}; font-weight: 500;
+    }}
+    .hero-check-icon {{
+        width: 20px; height: 20px; border-radius: 50%;
+        background: {c["light_blue"]}; color: {c["blue"]};
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
+    }}
 
-.mockup-chip-row {{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }}
-.mockup-chip {{
-    background: rgba(94, 161, 255, 0.14);
-    color: #8FBBFF;
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0.3rem 0.65rem;
-    border-radius: 999px;
-    border: 1px solid rgba(94, 161, 255, 0.25);
-}}
+    /* ---------- Mockup card: always dark ---------- */
+    .mockup-card {{
+        background: {DARK_BG}; border: 1px solid {DARK_BORDER}; border-radius: 14px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.35); overflow: hidden;
+        animation: fadeInUp 0.7s ease both; animation-delay: 0.15s;
+    }}
+    .mockup-titlebar {{
+        background: {DARK_PANEL}; border-bottom: 1px solid {DARK_BORDER};
+        padding: 0.6rem 0.9rem; display: flex; align-items: center; gap: 0.4rem;
+    }}
+    .mockup-dot {{ width: 9px; height: 9px; border-radius: 50%; }}
+    .mockup-body {{ padding: 1.2rem 1.3rem 1.4rem 1.3rem; }}
+    .mockup-row {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.7rem; }}
+    .mockup-label {{ font-size: 0.8rem; color: {DARK_MUTED}; font-weight: 600; letter-spacing: 0.03em; }}
+    .mockup-score {{ font-size: 0.95rem; color: #5EA1FF; font-weight: 800; }}
+    .mockup-bar-track {{ height: 7px; border-radius: 4px; background: {DARK_PANEL}; overflow: hidden; margin-bottom: 1rem; }}
+    .mockup-bar-fill {{ height: 100%; border-radius: 4px; background: linear-gradient(90deg, #5EA1FF, #A78BFA); }}
+    .mockup-chip-row {{ display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }}
+    .mockup-chip {{
+        background: rgba(94, 161, 255, 0.14); color: #8FBBFF; font-size: 0.72rem;
+        font-weight: 700; padding: 0.3rem 0.65rem; border-radius: 999px;
+        border: 1px solid rgba(94, 161, 255, 0.25);
+    }}
+    .mockup-timeline {{ display: flex; align-items: center; gap: 0.3rem; }}
+    .mockup-tl-dot {{ width: 8px; height: 8px; border-radius: 50%; background: #5EA1FF; flex-shrink: 0; }}
+    .mockup-tl-line {{ flex: 1; height: 2px; background: {DARK_BORDER}; }}
+    .mockup-tl-label {{ font-size: 0.68rem; color: {DARK_MUTED}; margin-top: 0.3rem; }}
 
-.mockup-timeline {{ display: flex; align-items: center; gap: 0.3rem; }}
-.mockup-tl-dot {{ width: 8px; height: 8px; border-radius: 50%; background: #5EA1FF; flex-shrink: 0; }}
-.mockup-tl-line {{ flex: 1; height: 2px; background: {DARK_BORDER}; }}
-.mockup-tl-label {{ font-size: 0.68rem; color: {DARK_MUTED}; margin-top: 0.3rem; }}
+    /* ---------- Stats bar ---------- */
+    .stats-bar {{
+        display: flex; justify-content: space-around; flex-wrap: wrap;
+        margin: 0.5rem 0 2.2rem 0; padding: 1.3rem 0.5rem;
+        background: {c["light_blue"]}; border-radius: 12px;
+        animation: fadeInUp 0.5s ease both; animation-delay: 0.2s;
+    }}
+    .stat-item {{ text-align: center; }}
+    .stat-number {{ font-size: 1.5rem; font-weight: 800; color: {c["blue"]}; }}
+    .stat-label {{ font-size: 0.74rem; color: {c["muted"]}; letter-spacing: 0.03em; text-transform: uppercase; margin-top: 0.15rem; }}
 
-/* ---------- Stats bar ---------- */
-.stats-bar {{
-    display: flex;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    margin: 0.5rem 0 2.2rem 0;
-    padding: 1.3rem 0.5rem;
-    background: {LIGHT_BLUE};
-    border-radius: 12px;
-    animation: fadeInUp 0.5s ease both;
-    animation-delay: 0.2s;
-}}
-.stat-item {{ text-align: center; }}
-.stat-number {{ font-size: 1.5rem; font-weight: 800; color: {NAVY}; }}
-.stat-label {{
-    font-size: 0.74rem;
-    color: {MUTED};
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    margin-top: 0.15rem;
-}}
+    /* ---------- Section labels + feature cards ---------- */
+    .section-label {{
+        text-align: center; color: {c["blue"]}; font-weight: 700; font-size: 0.78rem;
+        letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.4rem;
+    }}
+    .section-title {{ text-align: center; color: {c["text"]}; font-weight: 800; font-size: 1.6rem; margin-bottom: 1.6rem; }}
 
-/* ---------- Feature cards ---------- */
-.section-label {{
-    text-align: center;
-    color: {BLUE};
-    font-weight: 700;
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 0.4rem;
-}}
-.section-title {{
-    text-align: center;
-    color: {TEXT};
-    font-weight: 800;
-    font-size: 1.6rem;
-    margin-bottom: 1.6rem;
-}}
+    .feature-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.1rem; margin-bottom: 2.4rem; }}
+    .feature-card {{
+        background: {c["card_bg"]}; border: 1px solid {c["border"]}; border-top: 3px solid {c["blue"]};
+        border-radius: 10px; padding: 1.6rem 1.3rem; text-align: center;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        animation: fadeInUp 0.6s ease both; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }}
+    .feature-card:nth-child(1) {{ animation-delay: 0.1s; }}
+    .feature-card:nth-child(2) {{ animation-delay: 0.18s; }}
+    .feature-card:nth-child(3) {{ animation-delay: 0.26s; }}
+    .feature-card:hover {{ transform: translateY(-4px); box-shadow: 0 12px 28px {c["shadow"]}; }}
+    .feature-icon-circle {{
+        width: 50px; height: 50px; border-radius: 12px; background: {c["light_blue"]};
+        display: flex; align-items: center; justify-content: center; margin: 0 auto 0.9rem auto; font-size: 1.5rem;
+    }}
+    .feature-title {{ font-weight: 700; font-size: 1.02rem; margin-bottom: 0.4rem; color: {c["text"]}; }}
+    .feature-desc {{ font-size: 0.86rem; color: {c["muted"]}; line-height: 1.5; }}
 
-.feature-grid {{
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.1rem;
-    margin-bottom: 2.4rem;
-}}
+    @media (max-width: 900px) {{
+        .feature-grid {{ grid-template-columns: 1fr; }}
+        .stats-bar {{ gap: 1.2rem; }}
+    }}
 
-.feature-card {{
-    background: #FFFFFF;
-    border: 1px solid {BORDER};
-    border-top: 3px solid {BLUE};
-    border-radius: 10px;
-    padding: 1.6rem 1.3rem;
-    text-align: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    animation: fadeInUp 0.6s ease both;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}}
-.feature-card:nth-child(1) {{ animation-delay: 0.1s; }}
-.feature-card:nth-child(2) {{ animation-delay: 0.18s; }}
-.feature-card:nth-child(3) {{ animation-delay: 0.26s; }}
-.feature-card:hover {{
-    transform: translateY(-4px);
-    box-shadow: 0 12px 28px rgba(10, 102, 194, 0.14);
-}}
+    /* ---------- How it works ---------- */
+    .howitworks-wrap {{
+        position: relative; display: flex; justify-content: space-between;
+        margin: 0 auto 2.6rem auto; max-width: 640px;
+        animation: fadeInUp 0.6s ease both; animation-delay: 0.3s;
+    }}
+    .howitworks-wrap::before {{
+        content: ""; position: absolute; top: 18px; left: 10%; right: 10%;
+        height: 2px; background: {c["border"]}; z-index: 0;
+    }}
+    .howitworks-step {{ position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; flex: 1; }}
+    .howitworks-num {{
+        width: 36px; height: 36px; border-radius: 50%; background: {c["blue"]}; color: white;
+        font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; justify-content: center;
+        border: 4px solid {c["app_bg"]}; box-shadow: 0 0 0 1px {c["border"]};
+    }}
+    .howitworks-text {{ font-size: 0.82rem; color: {c["text"]}; font-weight: 600; text-align: center; }}
 
-.feature-icon-circle {{
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    background: {LIGHT_BLUE};
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 0.9rem auto;
-    font-size: 1.5rem;
-}}
-.feature-title {{ font-weight: 700; font-size: 1.02rem; margin-bottom: 0.4rem; color: {TEXT}; }}
-.feature-desc {{ font-size: 0.86rem; color: {MUTED}; line-height: 1.5; }}
+    /* ---------- Auth section ---------- */
+    .auth-section-wrap {{
+        background: {c["light_blue"]}; border-radius: 16px; padding: 2.2rem; margin-bottom: 1.5rem;
+        animation: fadeInUp 0.5s ease both; animation-delay: 0.35s;
+    }}
+    .auth-value-title {{ font-size: 1.4rem; font-weight: 800; color: {c["text"]}; margin-bottom: 0.6rem; }}
+    .auth-value-text {{ font-size: 0.92rem; color: {c["muted"]}; line-height: 1.6; margin-bottom: 1.2rem; }}
+    .auth-value-point {{ display: flex; align-items: flex-start; gap: 0.55rem; font-size: 0.87rem; color: {c["text"]}; margin-bottom: 0.6rem; }}
 
-@media (max-width: 900px) {{
-    .feature-grid {{ grid-template-columns: 1fr; }}
-    .stats-bar {{ gap: 1.2rem; }}
-}}
+    div[data-testid="stForm"] {{
+        background: {c["card_bg"]} !important; border: 1px solid {c["border"]}; border-radius: 12px;
+        padding: 0.5rem; box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }}
+    div[data-testid="stForm"] input {{
+        background-color: {c["panel_bg"]} !important;
+        color: {c["text"]} !important;
+    }}
 
-/* ---------- How it works: connected timeline ---------- */
-.howitworks-wrap {{
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    margin: 0 auto 2.6rem auto;
-    max-width: 640px;
-    animation: fadeInUp 0.6s ease both;
-    animation-delay: 0.3s;
-}}
-.howitworks-wrap::before {{
-    content: "";
-    position: absolute;
-    top: 18px;
-    left: 10%;
-    right: 10%;
-    height: 2px;
-    background: {BORDER};
-    z-index: 0;
-}}
-.howitworks-step {{
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    flex: 1;
-}}
-.howitworks-num {{
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: {BLUE};
-    color: white;
-    font-weight: 800;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 4px solid #FFFFFF;
-    box-shadow: 0 0 0 1px {BORDER};
-}}
-.howitworks-text {{ font-size: 0.82rem; color: {TEXT}; font-weight: 600; text-align: center; }}
+    .trust-line {{
+        text-align: center; color: {c["muted"]}; font-size: 0.8rem; margin-top: 1.2rem;
+        display: flex; align-items: center; justify-content: center; gap: 1.3rem; flex-wrap: wrap;
+    }}
+    .trust-line span {{ display: inline-flex; align-items: center; gap: 0.35rem; }}
 
-/* ---------- Auth section: split layout ---------- */
-.auth-section-wrap {{
-    background: {LIGHT_BLUE};
-    border-radius: 16px;
-    padding: 2.2rem;
-    margin-bottom: 1.5rem;
-    animation: fadeInUp 0.5s ease both;
-    animation-delay: 0.35s;
-}}
-.auth-value-title {{ font-size: 1.4rem; font-weight: 800; color: {TEXT}; margin-bottom: 0.6rem; }}
-.auth-value-text {{ font-size: 0.92rem; color: {MUTED}; line-height: 1.6; margin-bottom: 1.2rem; }}
-.auth-value-point {{
-    display: flex;
-    align-items: flex-start;
-    gap: 0.55rem;
-    font-size: 0.87rem;
-    color: {TEXT};
-    margin-bottom: 0.6rem;
-}}
+    /* ---------- General ---------- */
+    div[data-testid="stExpander"] {{
+        border: 1px solid {c["border"]}; border-radius: 10px; background: {c["card_bg"]};
+        transition: border-color 0.2s ease;
+    }}
+    div[data-testid="stExpander"]:hover {{ border-color: {c["blue"]}; }}
 
-div[data-testid="stForm"] {{
-    background: #FFFFFF;
-    border: 1px solid {BORDER};
-    border-radius: 12px;
-    padding: 0.5rem;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-}}
+    button[kind="primary"] {{
+        font-weight: 600; border-radius: 6px !important; background-color: {c["blue"]} !important;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }}
+    button[kind="primary"]:hover {{ transform: translateY(-1px); box-shadow: 0 4px 14px {c["shadow"]}; }}
 
-.trust-line {{
-    text-align: center;
-    color: {MUTED};
-    font-size: 0.8rem;
-    margin-top: 1.2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1.3rem;
-    flex-wrap: wrap;
-}}
-.trust-line span {{ display: inline-flex; align-items: center; gap: 0.35rem; }}
+    button[data-baseweb="tab"] {{ font-weight: 600; padding-top: 0.6rem; padding-bottom: 0.6rem; color: {c["muted"]}; }}
 
-/* ---------- General polish ---------- */
-div[data-testid="stExpander"] {{
-    border: 1px solid {BORDER};
-    border-radius: 10px;
-    background: #FFFFFF;
-    transition: border-color 0.2s ease;
-}}
-div[data-testid="stExpander"]:hover {{ border-color: {BLUE}; }}
+    div[data-testid="stFileUploaderDropzone"] {{ border-radius: 8px; border-color: {c["border"]}; background: {c["panel_bg"]} !important; }}
 
-button[kind="primary"] {{
-    font-weight: 600;
-    border-radius: 6px !important;
-    background-color: {BLUE} !important;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}}
-button[kind="primary"]:hover {{
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(10, 102, 194, 0.3);
-}}
+    div[data-testid="stAlert"] {{ animation: fadeInUp 0.3s ease both; border-radius: 8px; }}
 
-button[data-baseweb="tab"] {{
-    font-weight: 600;
-    padding-top: 0.6rem;
-    padding-bottom: 0.6rem;
-    color: {MUTED};
-}}
-
-div[data-testid="stFileUploaderDropzone"] {{ border-radius: 8px; border-color: {BORDER}; }}
-
-section[data-testid="stSidebar"] {{ background-color: {LIGHT_BLUE}; }}
-section[data-testid="stSidebar"] h2, section[data-testid="stSidebar"] h3 {{
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: {MUTED};
-}}
-
-div[data-testid="stAlert"] {{ animation: fadeInUp 0.3s ease both; border-radius: 8px; }}
-
-.app-footer {{
-    text-align: center;
-    color: {MUTED};
-    font-size: 0.78rem;
-    margin-top: 2rem;
-    padding-top: 1.2rem;
-    border-top: 1px solid {BORDER};
-}}
-</style>
-"""
+    .app-footer {{
+        text-align: center; color: {c["muted"]}; font-size: 0.78rem;
+        margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid {c["border"]};
+    }}
+    </style>
+    """
 
 
 def inject_custom_css() -> None:
-    """Inject the shared custom CSS block. Call once near the top of each page."""
-    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    """Inject the shared custom CSS block for the currently active theme mode."""
+    mode = get_theme_mode()
+    st.markdown(_build_css(mode), unsafe_allow_html=True)
 
 
 def render_brand_bar() -> None:
@@ -463,7 +345,7 @@ def render_hero_two_column() -> None:
 
     with left:
         st.markdown(
-            _clean(f"""
+            _clean("""
             <div class="hero-section">
                 <div class="hero-badge">✨ MULTI-AGENT AI · FREE TO USE</div>
                 <div class="hero-title">Turn your resume into a<br><span class="accent">complete career strategy</span></div>

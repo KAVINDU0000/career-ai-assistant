@@ -20,10 +20,11 @@ import streamlit as st
 from config import settings
 from crew import run_career_crew
 from auth_ui import render_auth_gate, render_user_badge_and_logout
-from styles import inject_custom_css, render_hero
+from styles import inject_custom_css, render_hero, render_theme_toggle
 
 # --- Page setup ---
 st.set_page_config(page_title="AI Career Assistant", page_icon="🧭", layout="wide")
+render_theme_toggle()
 inject_custom_css()
 
 # --- Auth gate: stop here if not logged in ---
