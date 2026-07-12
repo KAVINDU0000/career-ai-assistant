@@ -10,7 +10,7 @@ its real content.
 import streamlit as st
 
 from database.db import init_db
-from database.auth import register_user, verify_login, AuthError
+from database.auth import register_user, verify_login, delete_account, AuthError
 from styles import (
     render_brand_bar,
     render_hero_two_column,
@@ -131,7 +131,11 @@ def render_auth_gate() -> bool:
 
 
 def render_user_badge_and_logout() -> None:
-    """Render the logged-in user's email and a logout button in the sidebar."""
+    """
+    Render the logged-in user's email, a logout button, and a Danger Zone
+    for permanently deleting the account (with password re-confirmation)
+    in the sidebar.
+    """
     user = st.session_state.get("user")
     if not user:
         return
@@ -141,3 +145,28 @@ def render_user_badge_and_logout() -> None:
             del st.session_state["user"]
             _clear_analysis_state()
             st.rerun()
+
+        with st.expander("⚠️ Danger Zone"):
+            st.caption(
+                "Permanently delete your account and all saved resumes and "
+                "reports. This cannot be undone."
+            )
+            with st.form("delete_account_form"):
+                confirm_password = st.text_input(
+                    "Enter your password to confirm",
+                    type="password",
+                    key="delete_account_password",
+                )
+                confirmed = st.form_submit_button(
+                    "Permanently Delete My Account", use_container_width=True
+                )
+
+                if confirmed:
+                    try:
+                        delete_account(user["id"], confirm_password)
+                        del st.session_state["user"]
+                        _clear_analysis_state()
+                        st.success("Your account has been deleted.")
+                        st.rerun()
+                    except AuthError as exc:
+                        st.error(str(exc))

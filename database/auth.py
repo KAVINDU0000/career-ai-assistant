@@ -95,3 +95,36 @@ def verify_login(email: str, password: str) -> Optional[dict]:
         return {"id": user.id, "email": user.email}
     finally:
         session.close()
+
+
+def delete_account(user_id: int, password: str) -> None:
+    """
+    Permanently delete a user's account and all associated data.
+
+    Requires re-entering the current password as a safety check before
+    performing this irreversible action - protects against e.g. someone
+    else briefly using an unlocked, logged-in browser session.
+
+    Because Resume and Report models are set up with
+    cascade="all, delete-orphan" relationships, deleting the User row
+    here automatically deletes every Resume and Report belonging to them
+    too - no separate cleanup queries needed.
+
+    Args:
+        user_id: id of the account to delete.
+        password: The account's current password, for re-confirmation.
+
+    Raises:
+        AuthError: if the user doesn't exist or the password is incorrect.
+    """
+    session = get_session()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise AuthError("Account not found.")
+        if not bcrypt.checkpw(password.encode("utf-8"), user.password_hash.encode("utf-8")):
+            raise AuthError("Incorrect password. Account was not deleted.")
+        session.delete(user)
+        session.commit()
+    finally:
+        session.close()

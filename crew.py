@@ -96,6 +96,17 @@ def run_career_crew(resume_pdf_path: str, user_id: int, original_filename: str =
 
     report_id = save_report(resume_id=resume_id, report_markdown=report_markdown)
 
+    # The raw uploaded PDF is no longer needed once its text has been
+    # extracted and the report generated - both are already safely stored
+    # in the database. Deleting it here minimizes how long a copy of the
+    # candidate's original file sits on disk, reducing the data footprint
+    # kept per user. Best-effort: if this fails for any reason, we don't
+    # want to fail the whole analysis over a cleanup step.
+    try:
+        Path(resume_pdf_path).unlink(missing_ok=True)
+    except OSError:
+        pass
+
     return {
         "report_markdown": report_markdown,
         "resume_id": resume_id,
