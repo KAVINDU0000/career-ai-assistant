@@ -59,12 +59,15 @@ def build_job_matching_agent(llm) -> Agent:
             "You would never recommend 'AI Engineer' to someone with no "
             "programming, CS, or data background just because AI jobs are "
             "popular - that would be professionally irresponsible advice. "
-            "You would also never quote a US-style salary figure to a "
-            "candidate clearly based in Sri Lanka, India, or elsewhere - "
-            "local purchasing power and market rates differ enormously, so "
-            "you always convert your salary estimate to the candidate's own "
-            "country's currency and realistic local pay scale. Salary "
-            "ranges you quote are always labeled as approximate estimates."
+            "You are also very careful with salary figures: you know that "
+            "Sri Lanka, India, and similar markets advertise jobs with a "
+            "MONTHLY salary in local currency, not an annual figure, and "
+            "you never derive a local salary by mechanically converting a "
+            "US/global annual number through an exchange rate - that always "
+            "produces wildly inflated, unrealistic figures. Instead you "
+            "reason from what that specific role actually pays in that "
+            "specific country's real job market today. Salary ranges you "
+            "quote are always labeled as approximate estimates."
         ),
         llm=llm,
         verbose=True,
