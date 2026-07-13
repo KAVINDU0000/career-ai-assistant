@@ -36,7 +36,6 @@ def build_all_tasks(agents: dict, resume_text_preview: str, report_output_path: 
     report_task = build_report_task(
         agents["report_writer"],
         context=[resume_task, skill_task, job_task, interview_task, roadmap_task],
-        output_path=report_output_path,
     )
 
     return [resume_task, skill_task, job_task, interview_task, roadmap_task, report_task]

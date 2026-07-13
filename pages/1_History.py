@@ -11,6 +11,7 @@ from database.db import init_db
 from database.crud import get_all_reports, delete_report
 from auth_ui import render_auth_gate, render_user_badge_and_logout
 from styles import inject_custom_css, render_hero, render_section_label, render_brand_bar
+from report_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
 
 st.set_page_config(page_title="CareerCompass · History", page_icon="🗂️", layout="wide")
 inject_custom_css()
@@ -43,17 +44,26 @@ else:
             with st.expander(
                 f"📄 {r['filename']}  —  {r['created_at'].strftime('%Y-%m-%d %H:%M')}  —  Score: {score_display}"
             ):
-                col1, col2 = st.columns([1, 1])
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     st.download_button(
-                        label="📥 Download this report",
-                        data=r["report_markdown"],
-                        file_name=f"career_report_{r['id']}.md",
-                        mime="text/markdown",
-                        key=f"download_{r['id']}",
+                        label="📝 Download as Word",
+                        data=markdown_to_docx_bytes(r["report_markdown"], title="Career Analysis Report"),
+                        file_name=f"career_report_{r['id']}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        key=f"download_docx_{r['id']}",
                         use_container_width=True,
                     )
                 with col2:
+                    st.download_button(
+                        label="📕 Download as PDF",
+                        data=markdown_to_pdf_bytes(r["report_markdown"], title="Career Analysis Report"),
+                        file_name=f"career_report_{r['id']}.pdf",
+                        mime="application/pdf",
+                        key=f"download_pdf_{r['id']}",
+                        use_container_width=True,
+                    )
+                with col3:
                     if st.button("🗑️ Delete", key=f"delete_{r['id']}", use_container_width=True):
                         delete_report(user_id, r["id"])
                         st.rerun()

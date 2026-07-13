@@ -63,6 +63,7 @@ def run_career_crew(resume_pdf_path: str, user_id: int, original_filename: str =
     agents = build_all_agents()
     report_output_path = str(settings.REPORTS_DIR / settings.REPORT_FILENAME)
     tasks = build_all_tasks(agents, resume_text_preview, report_output_path)
+    resume_task, skill_task, job_task, interview_task, roadmap_task, report_task = tasks
 
     crew = Crew(
         agents=list(agents.values()),
@@ -75,17 +76,54 @@ def run_career_crew(resume_pdf_path: str, user_id: int, original_filename: str =
         max_rpm=5,
     )
 
-    # kickoff() returns a CrewOutput whose .raw attribute already holds the
-    # final task's text output in memory. We use that directly rather than
-    # reading the report back from disk - some hosting environments (e.g.
-    # Streamlit Community Cloud's mounted filesystem) can silently fail to
-    # persist the output_file write, even though the crew itself completes
-    # successfully. Relying on the in-memory result removes that entire
-    # class of failure. The physical file (written via each Task's
-    # output_file setting) is kept as a convenience for local runs, but is
-    # no longer required for the app to function.
-    result = crew.kickoff()
-    report_markdown = (result.raw or "").strip()
+    crew.kickoff()
+
+    # Assemble the final report programmatically from each task's own
+    # output, rather than asking one final LLM call to reproduce all of
+    # them verbatim. Earlier versions asked the Report Writer agent to
+    # combine and repeat every upstream section itself, but this proved
+    # unreliable in practice - the LLM would sometimes condense or
+    # silently drop entire sections (observed: Interview Questions and
+    # Learning Roadmap missing from generated reports) despite explicit
+    # instructions not to. Building the guaranteed sections directly from
+    # each task's .output.raw removes that failure mode structurally: the
+    # Report Writer's only job now is to synthesize the 2 genuinely new
+    # sections (Career Advice, Overall Resume Score), not reproduce content
+    # that already exists elsewhere.
+    def _strip_code_fence(text: str) -> str:
+        """
+        Remove a leading/trailing triple-backtick code fence if the LLM
+        wrapped its markdown output in one (e.g. ```markdown ... ``` or
+        plain ``` ... ```). This is common LLM behavior when asked to
+        produce "a markdown document" - without stripping it, Streamlit
+        renders the entire section as a literal code block instead of
+        parsed markdown (headings, bold, etc. all show as raw text).
+        """
+        text = text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if lines:
+                lines = lines[1:]  # drop opening ``` or ```markdown line
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]  # drop closing ```
+            text = "\n".join(lines).strip()
+        return text
+
+    def _section(header: str, task) -> str:
+        body = (task.output.raw if task.output else "").strip()
+        body = _strip_code_fence(body)
+        return f"## {header}\n\n{body}\n\n"
+
+    synthesized = _strip_code_fence(report_task.output.raw if report_task.output else "")
+
+    report_markdown = (
+        _section("Resume Summary", resume_task)
+        + _section("Skill Analysis", skill_task)
+        + _section("Recommended Jobs", job_task)
+        + _section("Interview Questions", interview_task)
+        + _section("Learning Roadmap", roadmap_task)
+        + synthesized
+    ).strip()
 
     if not report_markdown:
         raise RuntimeError(

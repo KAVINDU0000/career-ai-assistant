@@ -23,6 +23,7 @@ from auth_ui import render_auth_gate, render_user_badge_and_logout
 from database.db import init_db
 from database.crud import get_all_reports
 from styles import inject_custom_css, render_brand_bar, render_section_label, _clean
+from report_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
 
 # --- Page setup ---
 st.set_page_config(page_title="CareerCompass", page_icon="🧭", layout="wide")
@@ -212,10 +213,22 @@ if "report_md" in st.session_state:
                 st.markdown(report_md)
 
         st.divider()
-        st.download_button(
-            label="📥 Download Full Report (Markdown)",
-            data=report_md,
-            file_name=settings.REPORT_FILENAME,
-            mime="text/markdown",
-            use_container_width=True,
-        )
+        st.markdown("**Download your report:**")
+        dl_col1, dl_col2 = st.columns(2)
+
+        with dl_col1:
+            st.download_button(
+                label="📝 Download as Word (.docx)",
+                data=markdown_to_docx_bytes(report_md, title="Career Analysis Report"),
+                file_name="career_report.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                use_container_width=True,
+            )
+        with dl_col2:
+            st.download_button(
+                label="📕 Download as PDF (.pdf)",
+                data=markdown_to_pdf_bytes(report_md, title="Career Analysis Report"),
+                file_name="career_report.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
