@@ -66,12 +66,122 @@ header[data-testid="stHeader"] {{
 }}
 section[data-testid="stSidebar"] {{
     background-color: {SIDEBAR_BG} !important;
+    border-right: 1px solid {BORDER};
 }}
 section[data-testid="stSidebar"] * {{
     color: {TEXT} !important;
 }}
 p, span, div, label, li {{
     color: {TEXT};
+}}
+
+/* ---------- Sidebar nav links (Streamlit's own page list) ---------- */
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
+    padding-top: 0.5rem;
+}}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a {{
+    border-radius: 8px;
+    margin: 0.1rem 0.4rem;
+    padding: 0.45rem 0.7rem !important;
+    transition: background 0.15s ease;
+}}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a:hover {{
+    background: {ACCENT_BG} !important;
+}}
+section[data-testid="stSidebar"] [data-testid="stSidebarNav"] a[aria-current="page"] {{
+    background: {ACCENT_BG} !important;
+    border-left: 3px solid {BLUE};
+}}
+
+/* ---------- Sidebar profile card ---------- */
+.sidebar-profile-card {{
+    background: {PANEL};
+    border: 1px solid {BORDER};
+    border-radius: 12px;
+    padding: 1rem;
+    margin: 0.6rem 0 1rem 0;
+    text-align: center;
+}}
+.sidebar-avatar {{
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, {BLUE}, {PURPLE});
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.6rem auto;
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: {BG} !important;
+}}
+.sidebar-profile-label {{
+    font-size: 0.7rem;
+    color: {MUTED} !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
+}}
+.sidebar-profile-email {{
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: {TEXT} !important;
+    word-break: break-word;
+}}
+
+/* ---------- Sidebar section dividers ---------- */
+.sidebar-section-label {{
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: {MUTED} !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 1.2rem 0 0.5rem 0;
+    padding-top: 0.8rem;
+    border-top: 1px solid {BORDER};
+}}
+.sidebar-section-label:first-of-type {{
+    border-top: none;
+    padding-top: 0;
+}}
+
+/* ---------- Sidebar status badges ---------- */
+.sidebar-badge {{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: {ACCENT_BG};
+    border: 1px solid {BORDER};
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.82rem;
+}}
+.sidebar-badge.ok {{ border-color: rgba(94,161,255,0.35); }}
+.sidebar-badge.error {{ border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); }}
+.sidebar-badge-dot {{
+    width: 8px; height: 8px; border-radius: 50%;
+    background: {BLUE}; flex-shrink: 0;
+}}
+.sidebar-badge.error .sidebar-badge-dot {{ background: #EF4444; }}
+.sidebar-model-pill {{
+    display: inline-block;
+    background: {ACCENT_BG};
+    border: 1px solid {BORDER};
+    border-radius: 999px;
+    padding: 0.25rem 0.7rem;
+    font-size: 0.76rem;
+    font-family: monospace;
+    color: {BLUE} !important;
+}}
+
+/* Sidebar buttons: log out (outline) vs danger zone (red-tinted) */
+section[data-testid="stSidebar"] button {{
+    border-color: {BORDER} !important;
+}}
+section[data-testid="stSidebar"] div[data-testid="stExpander"] {{
+    border-color: rgba(239,68,68,0.3) !important;
+    background: rgba(239,68,68,0.05) !important;
 }}
 
 .block-container {{
@@ -434,6 +544,55 @@ def render_how_it_works() -> None:
 def render_section_label(label: str) -> None:
     """Render a small uppercase section label (e.g. 'GET STARTED')."""
     st.markdown(_clean(f'<div class="section-label">{label}</div>'), unsafe_allow_html=True)
+
+
+def render_user_profile_card(email: str) -> None:
+    """
+    Render a polished profile card in the sidebar: an avatar circle with
+    the user's first initial, and their email underneath. Call inside
+    `with st.sidebar:`.
+    """
+    initial = email[0].upper() if email else "?"
+    st.markdown(
+        _clean(f"""
+        <div class="sidebar-profile-card">
+            <div class="sidebar-avatar">{initial}</div>
+            <div class="sidebar-profile-label">Signed in as</div>
+            <div class="sidebar-profile-email">{email}</div>
+        </div>
+        """),
+        unsafe_allow_html=True,
+    )
+
+
+def render_sidebar_section_label(label: str) -> None:
+    """Render a small uppercase divider/label for a sidebar section (e.g. 'SETUP STATUS')."""
+    st.markdown(_clean(f'<div class="sidebar-section-label">{label}</div>'), unsafe_allow_html=True)
+
+
+def render_sidebar_badge(text: str, ok: bool = True) -> None:
+    """Render a status badge in the sidebar (e.g. API key loaded / missing)."""
+    css_class = "ok" if ok else "error"
+    st.markdown(
+        _clean(f"""
+        <div class="sidebar-badge {css_class}">
+            <div class="sidebar-badge-dot"></div>
+            <div>{text}</div>
+        </div>
+        """),
+        unsafe_allow_html=True,
+    )
+
+
+def render_sidebar_model_pill(model_name: str) -> None:
+    """Render the active model name as a small pill in the sidebar."""
+    st.markdown(
+        _clean(f"""
+        <div style="font-size:0.8rem; color:#9AA3B2; margin-bottom:0.3rem;">Model</div>
+        <div class="sidebar-model-pill">{model_name}</div>
+        """),
+        unsafe_allow_html=True,
+    )
 
 
 def render_footer() -> None:

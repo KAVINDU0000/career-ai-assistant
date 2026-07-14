@@ -18,6 +18,7 @@ from styles import (
     render_feature_cards,
     render_how_it_works,
     render_footer,
+    render_user_profile_card,
     _clean,
 )
 
@@ -140,7 +141,7 @@ def render_user_badge_and_logout() -> None:
     if not user:
         return
     with st.sidebar:
-        st.markdown(f"**Signed in as**  \n{user['email']}")
+        render_user_profile_card(user["email"])
         if st.button("Log out", use_container_width=True):
             del st.session_state["user"]
             _clear_analysis_state()

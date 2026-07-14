@@ -22,7 +22,15 @@ from crew import run_career_crew
 from auth_ui import render_auth_gate, render_user_badge_and_logout
 from database.db import init_db
 from database.crud import get_all_reports
-from styles import inject_custom_css, render_brand_bar, render_section_label, _clean
+from styles import (
+    inject_custom_css,
+    render_brand_bar,
+    render_section_label,
+    render_sidebar_section_label,
+    render_sidebar_badge,
+    render_sidebar_model_pill,
+    _clean,
+)
 from report_export import markdown_to_docx_bytes, markdown_to_pdf_bytes
 
 # --- Page setup ---
@@ -46,17 +54,51 @@ PIPELINE_STAGES = [
 ]
 
 
+KNOWN_REPORT_SECTIONS = [
+    "Resume Summary",
+    "Skill Analysis",
+    "Recommended Jobs",
+    "Interview Questions",
+    "Learning Roadmap",
+    "Career Advice",
+    "Overall Resume Score",
+]
+
+
 def split_report_sections(report_md: str) -> dict:
     """
-    Split the combined career_report.md into its top-level (##) sections
-    so the UI can render each one in its own tab instead of one giant blob.
+    Split the combined report into its 7 known top-level sections.
+
+    Only a '## ' line whose text exactly matches one of our 7 expected
+    section names is treated as a new section boundary. This matters
+    because individual agents sometimes format their own answers with
+    internal '## ' sub-headings (e.g. '## Education', '## Experience')
+    - naively splitting on every '## ' line would mistake those for new
+    top-level sections, truncating the real section's content down to
+    just its first line or two (the actual content ends up silently
+    misfiled under an unrecognized section name and never displayed).
+    Anchoring the split to only the known section names treats any other
+    '## ' line as ordinary body content instead.
     """
-    sections = {}
-    parts = re.split(r"^##\s+(.*)$", report_md, flags=re.MULTILINE)
-    for i in range(1, len(parts), 2):
-        title = parts[i].strip()
-        body = parts[i + 1].strip() if i + 1 < len(parts) else ""
-        sections[title] = body
+    sections: dict[str, str] = {}
+    current_name = None
+    current_lines: list[str] = []
+
+    for line in report_md.splitlines():
+        heading_match = re.match(r"^##\s+(.*)$", line)
+        heading_text = heading_match.group(1).strip() if heading_match else None
+
+        if heading_text in KNOWN_REPORT_SECTIONS:
+            if current_name is not None:
+                sections[current_name] = "\n".join(current_lines).strip()
+            current_name = heading_text
+            current_lines = []
+        elif current_name is not None:
+            current_lines.append(line)
+
+    if current_name is not None:
+        sections[current_name] = "\n".join(current_lines).strip()
+
     return sections
 
 
@@ -108,12 +150,12 @@ st.markdown(
 
 # --- Sidebar: config sanity check ---
 with st.sidebar:
-    st.header("Setup status")
+    render_sidebar_section_label("Setup Status")
     if settings.OPENAI_API_KEY:
-        st.success("OPENAI_API_KEY loaded")
+        render_sidebar_badge("API Key Loaded", ok=True)
     else:
-        st.error("OPENAI_API_KEY missing - add it to your .env file")
-    st.write(f"Model: `{settings.OPENAI_MODEL_NAME}`")
+        render_sidebar_badge("API Key Missing", ok=False)
+    render_sidebar_model_pill(settings.OPENAI_MODEL_NAME)
 
 # --- Upload card, with an icon-circle header matching the landing page's feature cards ---
 render_section_label("STEP 1 · GET STARTED")
